@@ -147,6 +147,6 @@ async function insertNote(db: Db, text: string, workOrderId: string): Promise<vo
     orgId: ORG_ID,
     text,
     workOrderId,
-    embedding: await embedText(text),
+    embedding: await embedText(text, "document"),
   });
 }

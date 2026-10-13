@@ -39,9 +39,9 @@
     {
       "id": "localEmbeddings",
       "type": "backend",
-      "label": "Local embeddings",
-      "sublabel": "all-MiniLM-L6-v2",
-      "tag": "384-d",
+      "label": "Voyage embeddings",
+      "sublabel": "voyage-4",
+      "tag": "1024-d",
       "pos": [
         909,
         40
@@ -234,7 +234,7 @@
       "title": "One local process",
       "items": [
         "server.ts listens on 127.0.0.1:8787 and starts the simulator",
-        "Notes are embedded locally, then queried with $vectorSearch",
+        "Notes are embedded with voyage-4, then queried with $vectorSearch",
         "This process does not call api.farmengage.com"
       ]
     },

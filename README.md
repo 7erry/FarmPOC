@@ -7,7 +7,7 @@ Atlas features in play:
 - [Time series](https://www.mongodb.com/docs/manual/core/timeseries-collections/) collection `telemetry` (speed and position samples)
 - [2dsphere](https://www.mongodb.com/docs/manual/core/indexes/index-types/geospatial/2dsphere/) indexes on field boundaries, guidance lines, and current fleet positions
 - [Atlas Search](https://www.mongodb.com/docs/atlas/atlas-search/atlas-search-overview/) on work orders
-- [Vector Search](https://www.mongodb.com/docs/atlas/atlas-vector-search/vector-search-overview/) on short job notes, embedded locally with `all-MiniLM-L6-v2`
+- [Vector Search](https://www.mongodb.com/docs/atlas/atlas-vector-search/vector-search-overview/) on short job notes, embedded with [voyage-4](https://www.mongodb.com/docs/voyageai/models/text-embeddings/) (1024 dimensions, cosine)
 
 The page header links the same docs. The download icon under the title fetches `/source.zip`, which is this source tree plus `CURSOR_PROMPT.md`. The [Node.js driver](https://www.mongodb.com/docs/drivers/node/current/) talks to Atlas.
 
@@ -19,18 +19,19 @@ The demo org is Ames Demo Farm: two fields (North 40, corn; South Field, soybean
 
 Each second the simulator writes speed and position into `telemetry` and updates the current pose in `fleetState`. The page shows a 3-minute average speed and a sparkline. Field boundaries, guidance lines, and live positions have `2dsphere` indexes. The snapshot counts machines inside each boundary with `$geoWithin`.
 
-Keyword search covers work order name, comments, operation type, and material, filtered to this org. Comments on a new work order are embedded locally with `all-MiniLM-L6-v2` (384 dimensions, cosine) and stored in `notes`. Similar-work search embeds the query the same way and runs `$vectorSearch`.
+Keyword search covers work order name, comments, operation type, and material, filtered to this org. Comments on a new work order are embedded with [voyage-4](https://www.mongodb.com/docs/api/doc/atlas-embedding-and-reranking-api/operation/operation-createembedding) (1024 dimensions, cosine) and stored in `notes`. Similar-work search embeds the query the same way and runs `$vectorSearch`.
 
 The map (MapLibre) draws field polygons, rate zones, AB lines, and machine markers. The side panel creates a work order (Plant, Fertilize, Spray, or Harvest) and sends it to a vehicle. That send stores the TASKDATA fragment in `syncJobs`. As the assigned machine drives the field, the simulator walks the cab status from pending through acknowledged and in progress to done, and raises the work order’s covered fraction until the job is complete.
 
 ## Run
 
-Sign up and create a free cluster at [MongoDB Atlas](https://www.mongodb.com/cloud/atlas/register). Copy the `mongodb+srv` connection string into `MONGODB_URI`, then run the commands below.
+Sign up and create a free cluster at [MongoDB Atlas](https://www.mongodb.com/cloud/atlas/register). Copy the `mongodb+srv` connection string into `MONGODB_URI`. Create an [Atlas model API key](https://www.mongodb.com/docs/voyageai/management/api-keys) and set `VOYAGE_API_KEY`. That key calls [voyage-4](https://www.mongodb.com/docs/voyageai/models/text-embeddings/) at `https://ai.mongodb.com/v1/embeddings`. Then run the commands below.
 
 ```bash
 npm install
 npm test
 export MONGODB_URI='mongodb+srv://USER:PASSWORD@myfreecluster.5thctns.mongodb.net/'
+export VOYAGE_API_KEY='your-atlas-model-api-key'
 npm run seed
 npm start
 ```

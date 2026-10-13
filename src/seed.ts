@@ -123,7 +123,7 @@ async function seed(): Promise<void> {
       orgId: ORG_ID,
       text,
       workOrderId: index === 0 ? workOrder.id : null,
-      embedding: await embedText(text),
+      embedding: await embedText(text, "document"),
     });
   }
 

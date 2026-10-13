@@ -61,17 +61,17 @@ One Node process serves the API and a static MapLibre page. No Payload, no secon
 - `fleetState` — one current point per vehicle (`location` Point, speed, heading, `activeWorkOrderId`, OEM). This is what the map and `$geoWithin` read. Updating a time series measurement in place is the wrong access path.
 - `telemetry` — time series collection, `timeField: "ts"`, `metaField: "meta"` (`orgId`, `vehicleId`, `oem`), `granularity: "seconds"`. Measurements: `location`, `speedKph`, `headingDeg`, `workOrderId`. Meta stays low-cardinality; speed and position are measurements.
 - `syncJobs` — local record of a TaskDoc / resource-file send: `pending` then `sent`, plus a cab acknowledgement the dashboard can show. API enum stays `pending | sent | canceled`; extra progress is PoC state, not a fake FarmENGAGE field.
-- `notes` — short text (work-order comments, operator notes) plus a 384-d embedding for “find a similar job”.
+- `notes` — short text (work-order comments, operator notes) plus a 1024-d embedding for “find a similar job”.
 
 Indexes created at seed:
 
 - 2dsphere on `fields.extent`, `guidanceLines.geometry`, `fleetState.location`.
 - Atlas Search on `workOrders`: `name`, `comments`, `operationType`, `materialName`; `orgId` as a token filter.
-- Vector Search on `notes.embedding`, 384 dimensions, cosine, filter on `orgId`.
+- Vector Search on `notes.embedding`, 1024 dimensions, cosine, filter on `orgId`.
 
 Search and vector indexes are not put on `telemetry`. Atlas Search does not index time series collections. Recent history is a time-series aggregation; keyword and semantic search stay on operational documents.
 
-Embeddings: local `all-MiniLM-L6-v2` via `@huggingface/transformers` so the demo needs no extra API key. Queries embed the same way.
+Embeddings: `voyage-4` through the Atlas Embedding and Reranking API (`VOYAGE_API_KEY`, 1024 dimensions). Stored notes use `input_type: document`. Similar-work queries use `input_type: query`.
 
 ## Demo behavior
 
@@ -92,7 +92,7 @@ Dashboard (one page):
 - [src/db.ts](src/db.ts) — client, time series collection, search and vector index creation
 - [src/seed.ts](src/seed.ts) — Iowa fixtures
 - [src/simulator.ts](src/simulator.ts) — mixed-fleet positions
-- [src/embed.ts](src/embed.ts) — MiniLM embeddings
+- [src/embed.ts](src/embed.ts) — voyage-4 embeddings
 - [src/farmengage/types.ts](src/farmengage/types.ts) — the subset of API models we store
 - [public/index.html](public/index.html) — MapLibre dashboard
 - [README.md](README.md) — how to run, which API operations are real vs simulated, M0 limits

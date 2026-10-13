@@ -46,7 +46,7 @@ export async function searchWorkOrders(db: Db, query: string): Promise<Record<st
 }
 
 export async function similarNotes(db: Db, query: string): Promise<Record<string, unknown>[]> {
-  const queryVector = await embedText(query);
+  const queryVector = await embedText(query, "query");
   return db
     .collection("notes")
     .aggregate<Record<string, unknown>>([

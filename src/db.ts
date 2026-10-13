@@ -10,7 +10,7 @@ import { MongoClient, type Collection, type Db, type Document } from "mongodb";
 export const DB_NAME = "farmengage_poc";
 export const WORKORDER_SEARCH_INDEX = "workorders_search";
 export const NOTES_VECTOR_INDEX = "notes_vector";
-export const EMBEDDING_DIMENSIONS = 384;
+export const EMBEDDING_DIMENSIONS = 1024;
 
 const TELEMETRY = "telemetry";
 const STANDARD_COLLECTIONS = [
@@ -99,6 +99,19 @@ export async function ensureStorage(db: Db): Promise<void> {
   );
 }
 
+function vectorDimensions(index: Document): number | undefined {
+  const raw = index.latestDefinition ?? index.definition;
+  if (typeof raw !== "object" || raw === null) return undefined;
+  const fields = (raw as Document).fields;
+  if (!Array.isArray(fields)) return undefined;
+  for (const field of fields) {
+    if (typeof field !== "object" || field === null) continue;
+    const record = field as Document;
+    if (record.type === "vector" && typeof record.numDimensions === "number") return record.numDimensions;
+  }
+  return undefined;
+}
+
 async function ensureSearchIndex(
   collection: Collection,
   name: string,
@@ -106,7 +119,16 @@ async function ensureSearchIndex(
   type?: "vectorSearch",
 ): Promise<void> {
   const existing = await collection.listSearchIndexes(name).toArray();
-  if (existing.length > 0) return;
+  if (existing.length > 0) {
+    if (type !== "vectorSearch" || vectorDimensions(existing[0]) === EMBEDDING_DIMENSIONS) return;
+    await collection.dropSearchIndex(name);
+    const deadline = Date.now() + 60_000;
+    while (Date.now() < deadline) {
+      const still = await collection.listSearchIndexes(name).toArray();
+      if (still.length === 0) break;
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+    }
+  }
   if (type) {
     await collection.createSearchIndex({ name, type, definition });
     return;

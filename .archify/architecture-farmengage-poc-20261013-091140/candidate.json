@@ -1,0 +1,251 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "title": "FarmENGAGE Atlas PoC",
+    "locale": "en",
+    "output": ".archify/architecture-farmengage-poc-20261013-091140/farmengage-poc.html",
+    "quality_profile": "showcase"
+  },
+  "components": [
+    {
+      "id": "operator",
+      "type": "external",
+      "label": "Operator",
+      "sublabel": "Browser",
+      "pos": [
+        24,
+        40
+      ],
+      "size": [
+        160,
+        70
+      ]
+    },
+    {
+      "id": "mapDashboard",
+      "type": "frontend",
+      "label": "Map dashboard",
+      "sublabel": "index.html · app.js",
+      "pos": [
+        280,
+        40
+      ],
+      "size": [
+        220,
+        70
+      ]
+    },
+    {
+      "id": "localEmbeddings",
+      "type": "backend",
+      "label": "Local embeddings",
+      "sublabel": "all-MiniLM-L6-v2",
+      "tag": "384-d",
+      "pos": [
+        909,
+        40
+      ],
+      "size": [
+        220,
+        70
+      ]
+    },
+    {
+      "id": "pocGateway",
+      "type": "backend",
+      "label": "PoC gateway",
+      "sublabel": "server.ts · :8787",
+      "tag": "one Node process",
+      "pos": [
+        180,
+        220
+      ],
+      "size": [
+        940,
+        88
+      ]
+    },
+    {
+      "id": "telemetrySeries",
+      "type": "database",
+      "label": "telemetry",
+      "sublabel": "time series",
+      "pos": [
+        176,
+        456
+      ],
+      "size": [
+        210,
+        76
+      ]
+    },
+    {
+      "id": "fieldFleet",
+      "type": "database",
+      "label": "fields · fleetState",
+      "sublabel": "2dsphere",
+      "pos": [
+        422,
+        456
+      ],
+      "size": [
+        210,
+        76
+      ]
+    },
+    {
+      "id": "workOrderSearch",
+      "type": "database",
+      "label": "workOrders",
+      "sublabel": "Atlas Search",
+      "pos": [
+        668,
+        456
+      ],
+      "size": [
+        210,
+        76
+      ]
+    },
+    {
+      "id": "noteVectors",
+      "type": "database",
+      "label": "notes",
+      "sublabel": "Vector Search",
+      "pos": [
+        914,
+        456
+      ],
+      "size": [
+        210,
+        76
+      ]
+    },
+    {
+      "id": "fleetSimulator",
+      "type": "backend",
+      "label": "Fleet simulator",
+      "sublabel": "simulator.ts · 1 Hz",
+      "tag": "same process",
+      "pos": [
+        176,
+        668
+      ],
+      "size": [
+        210,
+        76
+      ]
+    }
+  ],
+  "boundaries": [
+    {
+      "kind": "region",
+      "label": "Atlas farmengage_poc · MyFreeCluster M0 · us-east-1",
+      "wraps": [
+        "telemetrySeries",
+        "fieldFleet",
+        "workOrderSearch",
+        "noteVectors"
+      ],
+      "pad": 16
+    }
+  ],
+  "connections": [
+    {
+      "id": "open-map",
+      "from": "operator",
+      "to": "mapDashboard",
+      "label": "opens",
+      "variant": "emphasis"
+    },
+    {
+      "id": "fetch-api",
+      "from": "mapDashboard",
+      "to": "pocGateway",
+      "label": "GET JSON",
+      "variant": "emphasis",
+      "fromSide": "bottom",
+      "toSide": "top"
+    },
+    {
+      "id": "embed-text",
+      "from": "pocGateway",
+      "to": "localEmbeddings",
+      "label": "embed text",
+      "fromSide": "top",
+      "toSide": "bottom"
+    },
+    {
+      "id": "read-telemetry",
+      "from": "pocGateway",
+      "to": "telemetrySeries",
+      "label": "read 3 min"
+    },
+    {
+      "id": "geo-within",
+      "from": "pocGateway",
+      "to": "fieldFleet",
+      "label": "$geoWithin"
+    },
+    {
+      "id": "search-orders",
+      "from": "pocGateway",
+      "to": "workOrderSearch",
+      "label": "$search"
+    },
+    {
+      "id": "vector-notes",
+      "from": "pocGateway",
+      "to": "noteVectors",
+      "label": "$vectorSearch",
+      "fromSide": "right",
+      "toSide": "top",
+      "via": [[1144, 264], [1144, 400], [1019, 400]]
+    },
+    {
+      "id": "write-telemetry",
+      "from": "fleetSimulator",
+      "to": "telemetrySeries",
+      "label": "insertMany",
+      "fromSide": "top",
+      "toSide": "bottom"
+    },
+    {
+      "id": "write-fleet",
+      "from": "fleetSimulator",
+      "to": "fieldFleet",
+      "label": "upsert fleet",
+      "fromSide": "right",
+      "toSide": "bottom"
+    }
+  ],
+  "cards": [
+    {
+      "dot": "cyan",
+      "title": "Operator path",
+      "items": [
+        "The browser loads the MapLibre page from the gateway",
+        "app.js polls /api/snapshot and sends work orders"
+      ]
+    },
+    {
+      "dot": "emerald",
+      "title": "One local process",
+      "items": [
+        "server.ts listens on 127.0.0.1:8787 and starts the simulator",
+        "Notes are embedded locally, then queried with $vectorSearch",
+        "This process does not call api.farmengage.com"
+      ]
+    },
+    {
+      "dot": "amber",
+      "title": "Atlas database",
+      "items": [
+        "Database farmengage_poc on M0 MyFreeCluster in AWS us-east-1",
+        "John Deere and Raven are simulated vehicle labels",
+        "syncJobs stores a short TASKDATA fragment, not a full ISO-XML file"
+      ]
+    }
+  ]
+}

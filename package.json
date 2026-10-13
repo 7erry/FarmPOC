@@ -1,0 +1,19 @@
+{
+  "name": "farmengage-atlas-poc",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "tsx src/geo.test.ts && tsx src/isoxml.test.ts",
+    "seed": "tsx src/seed.ts",
+    "start": "tsx src/server.ts"
+  },
+  "dependencies": {
+    "@huggingface/transformers": "^3.7.3",
+    "mongodb": "^6.20.0"
+  },
+  "devDependencies": {
+    "@types/node": "^24.7.0",
+    "tsx": "^4.20.6",
+    "typescript": "^5.9.3"
+  }
+}

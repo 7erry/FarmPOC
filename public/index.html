@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>FarmENGAGE Atlas PoC</title>
+  <link rel="stylesheet" href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css" />
+  <style>
+    :root { color-scheme: dark; --bg: #121814; --panel: #1c2620; --ink: #e7f0ea; --muted: #9bb0a3; --line: #314038; --accent: #8fd18a; }
+    * { box-sizing: border-box; }
+    html, body { height: 100%; }
+    body { margin: 0; display: flex; flex-direction: column; font: 15px/1.4 "Segoe UI", sans-serif; background: var(--bg); color: var(--ink); }
+    header { display: flex; justify-content: space-between; gap: 16px; align-items: center; padding: 12px 16px; border-bottom: 1px solid var(--line); }
+    .brand { display: grid; justify-items: start; gap: 4px; }
+    h1 { font-size: 18px; margin: 0; }
+    .tools { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+    .download { color: var(--accent); display: inline-flex; }
+    .download svg { width: 22px; height: 22px; }
+    .docs { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; font-size: 12px; }
+    .docs a, .download:focus-visible { color: var(--muted); }
+    .download:focus-visible, .docs a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+    p { margin: 0; color: var(--muted); }
+    main { display: grid; grid-template-columns: 1fr 400px; flex: 1; min-height: 0; }
+    #map { min-height: 320px; }
+    aside { overflow: auto; padding: 12px 14px 24px; background: var(--panel); border-left: 1px solid var(--line); display: grid; gap: 14px; align-content: start; }
+    section { display: grid; gap: 8px; }
+    h2 { font-size: 13px; letter-spacing: 0.04em; text-transform: uppercase; margin: 0; color: var(--muted); }
+    label { display: grid; gap: 4px; font-size: 13px; }
+    input, select, button { font: inherit; color: var(--ink); background: #101612; border: 1px solid var(--line); border-radius: 6px; padding: 8px; }
+    button { background: #245c32; cursor: pointer; }
+    button:focus-visible, input:focus-visible, select:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+    button:disabled { opacity: 0.6; cursor: wait; }
+    table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    th, td { text-align: left; padding: 4px 0; border-bottom: 1px solid var(--line); }
+    .row { display: flex; gap: 8px; }
+    .row > * { flex: 1; }
+    .chips { display: flex; gap: 8px; flex-wrap: wrap; }
+    .chip { border: 1px solid var(--line); border-radius: 999px; padding: 2px 8px; font-size: 12px; }
+    .bar { height: 8px; background: #101612; border-radius: 99px; overflow: hidden; }
+    .bar span { display: block; height: 100%; background: var(--accent); }
+    pre { white-space: pre-wrap; font-size: 11px; background: #101612; padding: 8px; border-radius: 6px; }
+    #status { min-height: 1.2em; }
+    ul { margin: 0; padding-left: 18px; }
+    @media (max-width: 800px) {
+      main { grid-template-columns: 1fr; height: auto; }
+      #map { height: 55vh; }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="brand">
+      <h1>FarmENGAGE Atlas PoC</h1>
+      <div class="tools">
+        <a class="download" href="/source.zip" download="farmengage-atlas-poc.zip" aria-label="Download source code">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path fill="currentColor" d="M12 3a1 1 0 0 1 1 1v9.6l2.3-2.3a1 1 0 1 1 1.4 1.4l-4 4a1 1 0 0 1-1.4 0l-4-4a1 1 0 1 1 1.4-1.4l2.3 2.3V4a1 1 0 0 1 1-1zM5 19a1 1 0 0 1 1-1h12a1 1 0 1 1 0 2H6a1 1 0 0 1-1-1z"/>
+          </svg>
+        </a>
+        <nav class="docs" aria-label="Documentation">
+          <a href="https://www.mongodb.com/docs/manual/core/timeseries-collections/">Time series</a>
+          <a href="https://www.mongodb.com/docs/manual/core/indexes/index-types/geospatial/2dsphere/">Geospatial</a>
+          <a href="https://www.mongodb.com/docs/atlas/atlas-search/atlas-search-overview/">Search</a>
+          <a href="https://www.mongodb.com/docs/atlas/atlas-vector-search/vector-search-overview/">Vector Search</a>
+          <a href="/architecture">Architecture</a>
+        </nav>
+      </div>
+      <p id="org">Ames demo farm</p>
+    </div>
+    <div class="chips" id="chips"></div>
+  </header>
+  <main>
+    <div id="map" role="region" aria-label="Field map"></div>
+    <aside>
+      <p id="status" role="status"></p>
+      <section>
+        <h2>Machines in field</h2>
+        <div id="inside"></div>
+      </section>
+      <section>
+        <h2>Fleet, last 3 minutes</h2>
+        <table>
+          <thead><tr><th>Machine</th><th>Now</th><th>Avg</th></tr></thead>
+          <tbody id="fleet"></tbody>
+        </table>
+        <svg id="spark" viewBox="0 0 200 40" width="100%" height="40" aria-label="Speed sparkline"></svg>
+      </section>
+      <section>
+        <h2>Work order</h2>
+        <form id="order">
+          <label>Name <input name="name" required maxlength="80" value="Spray South Field" /></label>
+          <label>Field <select name="fieldId" required></select></label>
+          <label>Guidance <select name="guidanceId"></select></label>
+          <div class="row">
+            <label>Operation <select name="operationType" required></select></label>
+            <label>Material <input name="materialName" maxlength="80" value="Glyphosate" /></label>
+          </div>
+          <label>Comments <input name="comments" maxlength="500" value="Variable rate spray on the south field before the wind picks up" /></label>
+          <label>Send to <select name="vehicleId" required></select></label>
+          <button type="submit">Create and send to display</button>
+        </form>
+        <div id="orders"></div>
+      </section>
+      <section>
+        <h2>Display sync</h2>
+        <div id="sync"></div>
+      </section>
+      <section>
+        <h2>Work order search</h2>
+        <form id="search">
+          <label>Keywords <input name="q" required maxlength="200" value="spray" /></label>
+          <button type="submit">Search</button>
+        </form>
+        <ul id="search-results"></ul>
+      </section>
+      <section>
+        <h2>Similar work</h2>
+        <form id="similar">
+          <label>Describe the job <input name="q" required maxlength="300" value="variable rate spray on the north field" /></label>
+          <button type="submit">Find similar</button>
+        </form>
+        <ul id="similar-results"></ul>
+      </section>
+    </aside>
+  </main>
+  <script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
+  <script src="/app.js"></script>
+</body>
+</html>

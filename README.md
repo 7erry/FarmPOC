@@ -25,6 +25,8 @@ The map (MapLibre) draws field polygons, rate zones, AB lines, and machine marke
 
 ## Run
 
+Sign up and create a free cluster at [MongoDB Atlas](https://www.mongodb.com/cloud/atlas/register). Copy the `mongodb+srv` connection string into `MONGODB_URI`, then run the commands below.
+
 ```bash
 npm install
 npm test

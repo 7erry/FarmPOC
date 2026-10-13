@@ -14,10 +14,10 @@ const fleetIconIds = new Set();
 
 /** OEM values that have a cab or vehicle icon. Anything else keeps the circle marker. */
 const FLEET_ICONS = {
-  deere: "/icons/john-deere-8r.jpg",
-  agco: "/icons/agco-rogator.jpg",
-  raven: "/icons/raven-rcm.jpg",
-  trimble: "/icons/trimble-gfx.jpg",
+  deere: "/icons/john-deere-8r.png",
+  agco: "/icons/agco-rogator.png",
+  raven: "/icons/raven-rcm.png",
+  trimble: "/icons/trimble-gfx.png",
 };
 
 function loadFleetIcons(done) {

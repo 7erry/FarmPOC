@@ -34,10 +34,10 @@ const FILES: Record<string, { file: string; type: string }> = {
   "/": { file: "index.html", type: "text/html; charset=utf-8" },
   "/index.html": { file: "index.html", type: "text/html; charset=utf-8" },
   "/app.js": { file: "app.js", type: "text/javascript; charset=utf-8" },
-  "/icons/john-deere-8r.jpg": { file: "icons/john-deere-8r.jpg", type: "image/jpeg" },
-  "/icons/agco-rogator.jpg": { file: "icons/agco-rogator.jpg", type: "image/jpeg" },
-  "/icons/raven-rcm.jpg": { file: "icons/raven-rcm.jpg", type: "image/jpeg" },
-  "/icons/trimble-gfx.jpg": { file: "icons/trimble-gfx.jpg", type: "image/jpeg" },
+  "/icons/john-deere-8r.png": { file: "icons/john-deere-8r.png", type: "image/png" },
+  "/icons/agco-rogator.png": { file: "icons/agco-rogator.png", type: "image/png" },
+  "/icons/raven-rcm.png": { file: "icons/raven-rcm.png", type: "image/png" },
+  "/icons/trimble-gfx.png": { file: "icons/trimble-gfx.png", type: "image/png" },
 };
 const ARCHITECTURE_RELATIVE = ".archify/architecture-farmengage-poc-20261013-091140/farmengage-poc.html";
 const ARCHITECTURE_FILE = path.resolve(ROOT, ARCHITECTURE_RELATIVE);

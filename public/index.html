@@ -40,6 +40,11 @@
     .bar span { display: block; height: 100%; background: var(--accent); }
     pre { white-space: pre-wrap; font-size: 11px; background: #101612; padding: 8px; border-radius: 6px; }
     #status { min-height: 1.2em; }
+    .demo-row { display: flex; align-items: center; gap: 8px; }
+    .dot { width: 8px; height: 8px; border-radius: 99px; background: #6a7a70; flex: none; }
+    .dot.live { background: var(--accent); animation: pulse 1.2s ease-in-out infinite; }
+    @keyframes pulse { 50% { opacity: 0.35; } }
+    input[type="range"] { padding: 0; }
     ul { margin: 0; padding-left: 18px; }
     @media (max-width: 800px) {
       main { grid-template-columns: 1fr; height: auto; }
@@ -74,6 +79,24 @@
     <div id="map" role="region" aria-label="Field map"></div>
     <aside>
       <p id="status" role="status"></p>
+      <section>
+        <h2>Demo</h2>
+        <div class="demo-row">
+          <span id="sim-dot" class="dot" aria-hidden="true"></span>
+          <span id="sim-label">Idle</span>
+          <button type="button" id="sim-toggle">Start simulation</button>
+        </div>
+        <label>Telemetry interval <span id="sim-interval-label">1000 ms</span>
+          <input id="sim-interval" type="range" min="500" max="5000" step="100" value="1000" />
+        </label>
+        <label>Machine <select id="sim-vehicle"></select></label>
+        <div class="row">
+          <button type="button" id="sim-fail">Device failure</button>
+          <button type="button" id="sim-spike">Speed spike</button>
+          <button type="button" id="sim-freeze">Freeze</button>
+        </div>
+        <p id="sim-stats">0 emitted · 0/s</p>
+      </section>
       <section>
         <h2>Machines in field</h2>
         <div id="inside"></div>

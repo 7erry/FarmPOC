@@ -11,9 +11,9 @@ import { fileURLToPath } from "node:url";
 import { close, connect, indexIsReady, readIndexInfo } from "./db.ts";
 import { NOTES_VECTOR_INDEX, WORKORDER_SEARCH_INDEX } from "./db.ts";
 import { OPERATIONS, ORG_ID, ORG_NAME } from "./fixtures.ts";
-import type { FieldDoc, FleetStateDoc, GuidanceDoc, PrescriptionDoc, SyncJobDoc, TelemetryDoc, VehicleDoc, WorkOrderDoc } from "./farmengage/types.ts";
+import { ANOMALY_TYPES, type AnomalyType, type FieldDoc, type FleetStateDoc, type GuidanceDoc, type PrescriptionDoc, type SyncJobDoc, type TelemetryDoc, type VehicleDoc, type WorkOrderDoc } from "./farmengage/types.ts";
 import { searchWorkOrders, similarNotes } from "./queries.ts";
-import { startSimulator } from "./simulator.ts";
+import { startSimulator, UnknownVehicleError, type SimulatorController } from "./simulator.ts";
 import { HttpError, createWorkOrder, sendWorkOrder } from "./workorders.ts";
 
 const PUBLIC_DIR = path.join(path.dirname(fileURLToPath(import.meta.url)), "..", "public");
@@ -39,7 +39,7 @@ const FILES: Record<string, { file: string; type: string }> = {
   "/icons/raven-rcm.png": { file: "icons/raven-rcm.png", type: "image/png" },
   "/icons/trimble-gfx.png": { file: "icons/trimble-gfx.png", type: "image/png" },
 };
-const ARCHITECTURE_RELATIVE = ".archify/architecture-farmengage-poc-20261013-091140/farmengage-poc.html";
+const ARCHITECTURE_RELATIVE = ".archify/architecture-farmengage-poc-20261014-103734/farmengage-poc.html";
 const ARCHITECTURE_FILE = path.resolve(ROOT, ARCHITECTURE_RELATIVE);
 
 const SEND_PATH = /^\/api\/workorders\/([^/]+)\/send$/;
@@ -164,7 +164,28 @@ async function snapshot(db: Awaited<ReturnType<typeof connect>>): Promise<unknow
   };
 }
 
-async function handle(req: IncomingMessage, res: ServerResponse, db: Awaited<ReturnType<typeof connect>>): Promise<void> {
+function readIntervalMs(body: unknown): number {
+  if (typeof body !== "object" || body === null) throw new HttpError("Body required", 400);
+  const value = (body as { intervalMs?: unknown }).intervalMs;
+  if (typeof value !== "number" || !Number.isFinite(value)) throw new HttpError("intervalMs is required", 400);
+  return value;
+}
+
+function readAnomaly(body: unknown): { type: AnomalyType; vehicleId: string } {
+  if (typeof body !== "object" || body === null) throw new HttpError("Body required", 400);
+  const record = body as { type?: unknown; vehicleId?: unknown };
+  const type = ANOMALY_TYPES.find((item) => item === record.type);
+  if (!type) throw new HttpError("type must be DEVICE_FAILURE, SPEED_SPIKE, or FREEZE_EVENT", 400);
+  if (typeof record.vehicleId !== "string" || record.vehicleId.length === 0) throw new HttpError("vehicleId is required", 400);
+  return { type, vehicleId: record.vehicleId };
+}
+
+async function handle(
+  req: IncomingMessage,
+  res: ServerResponse,
+  db: Awaited<ReturnType<typeof connect>>,
+  simulator: SimulatorController,
+): Promise<void> {
   const url = new URL(req.url ?? "/", "http://127.0.0.1");
   const query = url.searchParams.get("q")?.trim() ?? "";
 
@@ -173,7 +194,7 @@ async function handle(req: IncomingMessage, res: ServerResponse, db: Awaited<Ret
     return;
   }
   if (req.method === "GET" && url.pathname === "/architecture") {
-    const allowed = path.resolve(ROOT, ".archify", "architecture-farmengage-poc-20261013-091140", "farmengage-poc.html");
+    const allowed = path.resolve(ROOT, ".archify", "architecture-farmengage-poc-20261014-103734", "farmengage-poc.html");
     if (ARCHITECTURE_FILE !== allowed) {
       sendJson(res, 404, { error: "Not found" });
       return;
@@ -199,6 +220,31 @@ async function handle(req: IncomingMessage, res: ServerResponse, db: Awaited<Ret
     sendJson(res, 200, { results: await similarNotes(db, query) });
     return;
   }
+  if (req.method === "GET" && url.pathname === "/api/simulator/status") {
+    sendJson(res, 200, simulator.status());
+    return;
+  }
+  if (req.method === "POST" && url.pathname === "/api/simulator/start") {
+    simulator.start();
+    sendJson(res, 200, simulator.status());
+    return;
+  }
+  if (req.method === "POST" && url.pathname === "/api/simulator/stop") {
+    simulator.stop();
+    sendJson(res, 200, simulator.status());
+    return;
+  }
+  if (req.method === "POST" && url.pathname === "/api/simulator/config") {
+    simulator.setIntervalMs(readIntervalMs(await readBody(req)));
+    sendJson(res, 200, simulator.status());
+    return;
+  }
+  if (req.method === "POST" && url.pathname === "/api/simulator/inject-anomaly") {
+    const anomaly = readAnomaly(await readBody(req));
+    await simulator.inject(anomaly.type, anomaly.vehicleId);
+    sendJson(res, 200, simulator.status());
+    return;
+  }
   if (req.method === "POST" && url.pathname === "/api/workorders") {
     sendJson(res, 201, await createWorkOrder(db, await readBody(req)));
     return;
@@ -221,12 +267,12 @@ async function handle(req: IncomingMessage, res: ServerResponse, db: Awaited<Ret
 
 export async function main(): Promise<void> {
   const db = await connect();
-  const stop = startSimulator(db);
+  const simulator = startSimulator(db);
   const port = Number(process.env.PORT ?? 8787);
   const server = createServer((req, res) => {
-    void handle(req, res, db).catch((error: unknown) => {
+    void handle(req, res, db, simulator).catch((error: unknown) => {
       if (res.headersSent) return;
-      const status = error instanceof HttpError ? error.status : 500;
+      const status = error instanceof HttpError ? error.status : error instanceof UnknownVehicleError ? 400 : 500;
       const message = error instanceof Error ? error.message : "Unknown error";
       sendJson(res, status, { error: message });
     });
@@ -238,7 +284,7 @@ export async function main(): Promise<void> {
   console.log(`FarmENGAGE PoC listening on http://127.0.0.1:${port}`);
 
   const shutdown = async (): Promise<void> => {
-    stop();
+    simulator.stop();
     server.close();
     await close();
     process.exit(0);

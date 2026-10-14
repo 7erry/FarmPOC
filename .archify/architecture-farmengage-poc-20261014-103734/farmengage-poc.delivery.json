@@ -1,0 +1,17 @@
+{
+  "schemaVersion": 1,
+  "receiptId": "e112c9c2-b33a-4b80-a1a3-a01685282dbb",
+  "status": "current",
+  "command": "deliver",
+  "type": "architecture",
+  "input": "/Users/terry.walters/Documents/projects/AgCo/.archify/architecture-farmengage-poc-20261014-103734/candidate.json",
+  "output": "/Users/terry.walters/Documents/projects/AgCo/.archify/architecture-farmengage-poc-20261014-103734/farmengage-poc.html",
+  "specification": {
+    "sha256": "dcca190a41453cfee4617a73c51315c8f51f19703dc121d4d655a35c56926f46",
+    "bytes": 7580
+  },
+  "artifact": {
+    "sha256": "7f566fecdd8da4aa78f0c5ea6188d9002e89f5c8e9273392c8dd89ef3ba1476e",
+    "bytes": 770332
+  }
+}

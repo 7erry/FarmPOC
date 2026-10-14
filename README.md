@@ -17,7 +17,7 @@ Display send follows `PUT /operations/{orgId}/workorders/{workOrderId}/vehicleta
 
 The demo org is Ames Demo Farm: two fields (North 40, corn; South Field, soybeans), AB guidance lines, a rate prescription, and a mixed fleet. `npm run seed` loads that into the existing M0 cluster and waits until Search and Vector Search answer a probe. `npm start` serves the page at `http://127.0.0.1:8787` and starts the simulator.
 
-Each second the simulator writes speed and position into `telemetry` and updates the current pose in `fleetState`. The page shows a 3-minute average speed and a sparkline. Field boundaries, guidance lines, and live positions have `2dsphere` indexes. The snapshot counts machines inside each boundary with `$geoWithin`.
+Each second the simulator writes speed and position into `telemetry` and updates the current pose in `fleetState`. The Demo section in the sidebar starts, pauses, and retimes that loop, and `telemetry.anomaly` is the field a stream processor would match. The page shows a 3-minute average speed and a sparkline. Field boundaries, guidance lines, and live positions have `2dsphere` indexes. The snapshot counts machines inside each boundary with `$geoWithin`.
 
 Keyword search covers work order name, comments, operation type, and material, filtered to this org. Comments on a new work order are embedded with [voyage-4](https://www.mongodb.com/docs/api/doc/atlas-embedding-and-reranking-api/operation/operation-createembedding) (1024 dimensions, cosine) and stored in `notes`. Similar-work search embeds the query the same way and runs `$vectorSearch`.
 

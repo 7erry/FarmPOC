@@ -152,6 +152,9 @@ export type FleetStateDoc = {
   ts: Date;
 };
 
+export const ANOMALY_TYPES = ["DEVICE_FAILURE", "SPEED_SPIKE", "FREEZE_EVENT"] as const;
+export type AnomalyType = (typeof ANOMALY_TYPES)[number];
+
 export type TelemetryDoc = {
   ts: Date;
   meta: { orgId: string; vehicleId: string; oem: Oem };
@@ -159,6 +162,8 @@ export type TelemetryDoc = {
   speedKph: number;
   headingDeg: number;
   workOrderId: string | null;
+  /** Set only on an injected sample. A stream processor matches this field. */
+  anomaly?: AnomalyType;
 };
 
 export type SyncJobDoc = {

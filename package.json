@@ -3,7 +3,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "test": "tsx src/geo.test.ts && tsx src/isoxml.test.ts && tsx src/embed.test.ts",
+    "test": "tsx src/geo.test.ts && tsx src/isoxml.test.ts && tsx src/embed.test.ts && tsx src/simulator.test.ts",
     "seed": "tsx src/seed.ts",
     "start": "tsx src/server.ts"
   },

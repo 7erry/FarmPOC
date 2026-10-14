@@ -283,12 +283,88 @@ function renderMap(data) {
   }
 }
 
+const simToggle = document.querySelector("#sim-toggle");
+const simInterval = document.querySelector("#sim-interval");
+const simVehicle = document.querySelector("#sim-vehicle");
+
+function fillSimulatorVehicles(data) {
+  const selected = simVehicle.value;
+  const known = new Set([...simVehicle.options].map((option) => option.value));
+  const next = new Set(data.vehicles.map((vehicle) => vehicle.id));
+  if (known.size === next.size && [...next].every((id) => known.has(id))) return;
+  simVehicle.replaceChildren();
+  for (const vehicle of data.vehicles) option(simVehicle, vehicle.id, vehicle.name);
+  if (next.has(selected)) simVehicle.value = selected;
+}
+
+function showSimulator(status) {
+  const live = status.isRunning;
+  document.querySelector("#sim-dot").classList.toggle("live", live);
+  document.querySelector("#sim-label").textContent = live ? "Active" : "Idle";
+  simToggle.textContent = live ? "Pause simulation" : "Start simulation";
+  document.querySelector("#sim-stats").textContent = `${status.totalEmitted} emitted · ${status.eventsPerSec}/s · ${status.activeMachines} machines`;
+  document.querySelector("#sim-interval-label").textContent = `${status.intervalMs} ms`;
+  if (document.activeElement !== simInterval) simInterval.value = String(status.intervalMs);
+}
+
 async function refresh() {
   snapshot = await getJson("/api/snapshot");
   fillForm(snapshot);
+  fillSimulatorVehicles(snapshot);
   renderLists(snapshot);
   if (map?.loaded()) renderMap(snapshot);
+  showSimulator(await getJson("/api/simulator/status"));
 }
+
+simToggle.addEventListener("click", async () => {
+  const live = document.querySelector("#sim-dot").classList.contains("live");
+  try {
+    showSimulator(await getJson(live ? "/api/simulator/stop" : "/api/simulator/start", { method: "POST" }));
+    setStatus(live ? "Simulation paused." : "Simulation running.");
+  } catch (error) {
+    setStatus(error.message);
+  }
+});
+
+simInterval.addEventListener("input", () => {
+  document.querySelector("#sim-interval-label").textContent = `${simInterval.value} ms`;
+});
+
+simInterval.addEventListener("change", async () => {
+  try {
+    showSimulator(await getJson("/api/simulator/config", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ intervalMs: Number(simInterval.value) }),
+    }));
+    setStatus(`Telemetry interval ${simInterval.value} ms.`);
+  } catch (error) {
+    setStatus(error.message);
+  }
+});
+
+async function injectAnomaly(type, label) {
+  if (!simVehicle.value) {
+    setStatus("No machine to inject.");
+    return;
+  }
+  try {
+    showSimulator(await getJson("/api/simulator/inject-anomaly", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ type, vehicleId: simVehicle.value }),
+    }));
+    const name = simVehicle.selectedOptions[0]?.textContent ?? "machine";
+    setStatus(`${label} on ${name}.`);
+    await refresh();
+  } catch (error) {
+    setStatus(error.message);
+  }
+}
+
+document.querySelector("#sim-fail").addEventListener("click", () => injectAnomaly("DEVICE_FAILURE", "Device failure"));
+document.querySelector("#sim-spike").addEventListener("click", () => injectAnomaly("SPEED_SPIKE", "Speed spike"));
+document.querySelector("#sim-freeze").addEventListener("click", () => injectAnomaly("FREEZE_EVENT", "Freeze"));
 
 fieldSelect.addEventListener("change", filterGuidance);
 orderForm.addEventListener("submit", async (event) => {
